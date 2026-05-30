@@ -1,6 +1,2 @@
-export async function loginUser(data) {
-  return {
-    success: true,
-    user: data.email,
-  };
-}
+// Deprecated — use userService.js instead
+export { loginUser, registerUser, getProfile } from './userService';

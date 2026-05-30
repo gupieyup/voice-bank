@@ -6,6 +6,7 @@ import DashboardPage from '../pages/DashboardPage';
 import TransferPage from '../pages/TransferPage';
 import HistoryPage from '../pages/HistoryPage';
 import MainLayout from '../layouts/MainLayout';
+import ProtectedRoute from '../components/ProtectedRoute';
 
 function AppRoutes() {
   return (
@@ -14,32 +15,37 @@ function AppRoutes() {
       <Route path="/" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* Dashboard */}
+      {/* Protected */}
       <Route
         path="/dashboard"
         element={
-          <MainLayout>
-            <DashboardPage />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <DashboardPage />
+            </MainLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/history"
         element={
-          <MainLayout>
-            <HistoryPage />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <HistoryPage />
+            </MainLayout>
+          </ProtectedRoute>
         }
       />
 
-      {/* Transfer */}
       <Route
         path="/transfer"
         element={
-          <MainLayout>
-            <TransferPage />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <TransferPage />
+            </MainLayout>
+          </ProtectedRoute>
         }
       />
     </Routes>

@@ -2,97 +2,93 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import PopupMessage from '../components/PopupMessage';
+import { registerUser } from '../services/userService';
+import { useAuth } from '../hooks/useAuth';
+import { tts } from '../services/ttsService';
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const [nameError, setNameError] = useState('');
-  const [emailError, setEmailError] = useState('');
-
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-
-    setNameError('');
-    setEmailError('');
+    setError('');
 
     const nameRegex = /^[A-Za-z\s]+$/;
-
     if (!nameRegex.test(name)) {
-        setNameError('Nama hanya berupa huruf');
-        return;
+      setError('Nama hanya berupa huruf');
+      return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(email)) {
-        setEmailError('Masukkan email yang valid');
-        return;
+    setLoading(true);
+    try {
+      const data = await registerUser({ name, email, password });
+      login(data.access_token, data.user);
+      tts.registerSuccess(data.user.name);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Registrasi gagal');
+    } finally {
+      setLoading(false);
     }
-
-    const userData = {
-        name,
-        email,
-        password,
-    };
-
-    localStorage.setItem( 
-        'registeredUser',
-        JSON.stringify(userData)
-    );
-
-    navigate('/');
   };
 
   return (
-    <div className="auth-container">
+    <div className="auth-container" role="main" aria-label="Halaman registrasi">
       <h1>Register</h1>
 
-      <form onSubmit={handleRegister} noValidate>
+      <form onSubmit={handleRegister} noValidate aria-label="Form registrasi">
         <div className="input-group">
           <input
             type="text"
             placeholder="Nama"
+            aria-label="Nama lengkap"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            required
           />
-
-          <PopupMessage message={nameError} />
         </div>
 
         <div className="input-group">
           <input
-            type="text"
+            type="email"
             placeholder="Email"
+            aria-label="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            required
           />
-
-          <PopupMessage message={emailError} />
         </div>
 
         <div className="input-group">
           <input
             type="password"
             placeholder="Password"
+            aria-label="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
           />
         </div>
 
-        <button type="submit">
-          Register
+        <div aria-live="polite">
+          <PopupMessage message={error} />
+        </div>
+
+        <button type="submit" disabled={loading} aria-label={loading ? 'Sedang memproses registrasi' : 'Daftar akun baru'}>
+          {loading ? 'Loading...' : 'Register'}
         </button>
       </form>
 
       <p>
         Sudah punya akun?{' '}
-        <Link to="/">
-          Login
-        </Link>
+        <Link to="/">Login</Link>
       </p>
     </div>
   );
