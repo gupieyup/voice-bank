@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Bell, User as UserIcon } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 /* ─── Styles ─── */
 const styles = `
@@ -121,13 +122,17 @@ function generateAccountNumber() {
 
 export default function Header() {
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
 
-  const user          = JSON.parse(localStorage.getItem('registeredUser')) || { name: 'Pengguna' };
-  const accountNumber = localStorage.getItem('accountNumber') || (() => {
-    const n = generateAccountNumber();
-    localStorage.setItem('accountNumber', n);
-    return n;
-  })();
+  const user = authUser || { name: 'Pengguna' };
+  // Account number derived from user.id (deterministic) atau fallback random
+  const accountNumber = user?.id
+    ? String(1000000000 + (user.id * 12345) % 9000000000)
+    : (localStorage.getItem('accountNumber') || (() => {
+        const n = generateAccountNumber();
+        localStorage.setItem('accountNumber', n);
+        return n;
+      })());
 
   const hour = new Date().getHours();
   const greeting =

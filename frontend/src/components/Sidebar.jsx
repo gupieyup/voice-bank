@@ -214,10 +214,6 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  const user = JSON.parse(localStorage.getItem("registeredUser")) || {
-    name: "Pengguna",
-  };
-
   const handleLogout = () => {
     logout();
     navigate("/");

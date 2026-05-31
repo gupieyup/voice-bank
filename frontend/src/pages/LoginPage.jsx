@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mic } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { loginUser } from '../services/userService';
+import { tts } from '../services/ttsService';
 
 /* ─── Keyframe styles injected once ─── */
 const styles = `
@@ -224,22 +226,41 @@ function LoginPage() {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     const t = setTimeout(() => setShowSplash(false), 2600);
     return () => clearTimeout(t);
   }, []);
 
-  const handleLogin = (e) => {
+  // TTS announce halaman login saat splash selesai (a11y untuk tunanetra)
+  useEffect(() => {
+    if (!showSplash) {
+      tts.speak('Halaman login VoiceBank. Silakan masukkan email dan password Anda.');
+    }
+  }, [showSplash]);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     setEmailError('');
     setPasswordError('');
-
-    const storedUser = JSON.parse(localStorage.getItem('registeredUser'));
-    if (!storedUser) { setEmailError('Email belum terdaftar'); return; }
-    if (email !== storedUser.email) { setEmailError('Email belum terdaftar'); return; }
-    if (password !== storedUser.password) { setPasswordError('Password salah'); return; }
-    login('mock-jwt-token', storedUser);
-    navigate('/dashboard');
+    setLoading(true);
+    try {
+      const data = await loginUser({ email, password });
+      login(data.access_token, data.user);
+      tts.welcome(data.user.name);
+      navigate('/dashboard');
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Login gagal';
+      if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('password')) {
+        setEmailError(msg);
+      } else {
+        setEmailError(msg);
+      }
+      tts.loginError();
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ── Splash Screen ── */
@@ -314,8 +335,8 @@ function LoginPage() {
               </div>
             </div>
 
-            <button type="submit" className="vb-btn">
-              Masuk sekarang
+            <button type="submit" className="vb-btn" disabled={loading} aria-label={loading ? 'Memproses login' : 'Masuk sekarang'}>
+              {loading ? 'Memproses...' : 'Masuk sekarang'}
             </button>
           </form>
 

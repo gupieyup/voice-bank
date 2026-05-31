@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mic } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { registerUser } from '../services/userService';
+import { tts } from '../services/ttsService';
 
 /* ─── Shared style tag (same design system as LoginPage) ─── */
 const styles = `
@@ -205,6 +208,7 @@ function getStrength(pw) {
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -212,22 +216,47 @@ function RegisterPage() {
 
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const strength = getStrength(password);
 
-  const handleRegister = (e) => {
+  // TTS announce halaman register
+  useEffect(() => {
+    tts.speak('Halaman pendaftaran. Silakan isi nama, email, dan password.');
+  }, []);
+
+  const handleRegister = async (e) => {
     e.preventDefault();
     setNameError('');
     setEmailError('');
 
     const nameRegex = /^[A-Za-z\s]+$/;
-    if (!nameRegex.test(name)) { setNameError('Nama hanya berupa huruf'); return; }
+    if (!nameRegex.test(name)) {
+      setNameError('Nama hanya berupa huruf');
+      tts.error('Nama hanya boleh berupa huruf.');
+      return;
+    }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) { setEmailError('Masukkan email yang valid'); return; }
+    if (!emailRegex.test(email)) {
+      setEmailError('Masukkan email yang valid');
+      tts.error('Email tidak valid.');
+      return;
+    }
 
-    localStorage.setItem('registeredUser', JSON.stringify({ name, email, password }));
-    navigate('/');
+    setLoading(true);
+    try {
+      const data = await registerUser({ name, email, password });
+      login(data.access_token, data.user);
+      tts.registerSuccess(data.user.name);
+      navigate('/dashboard');
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Registrasi gagal';
+      setEmailError(msg);
+      tts.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const segClass = (i) => {
@@ -316,8 +345,8 @@ function RegisterPage() {
               </div>
             </div>
 
-            <button type="submit" className="vb-btn">
-              Buat akun
+            <button type="submit" className="vb-btn" disabled={loading} aria-label={loading ? 'Memproses pendaftaran' : 'Buat akun'}>
+              {loading ? 'Memproses...' : 'Buat akun'}
             </button>
           </form>
 
