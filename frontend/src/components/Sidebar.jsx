@@ -1,112 +1,263 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Send, Clock, Bell, User, LogOut, Mic } from 'lucide-react';
+import { NavLink, useNavigate } from "react-router-dom";
+import { Home, Send, Clock, Bell, User, LogOut, Mic } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
-function Sidebar() {
+/* ─── Styles ─── */
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap');
+
+  @keyframes sb-fade-in {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .sb-root * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .sb-aside {
+    font-family: 'DM Sans', sans-serif;
+    width: 240px;
+    height: 100%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: #080b10;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+    z-index: 20;
+    animation: sb-fade-in 0.4s cubic-bezier(.22,1,.36,1) both;
+  }
+
+  /* subtle red ambient top-left */
+  .sb-aside::before {
+    content: '';
+    position: absolute;
+    top: -40px; left: -40px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(220,38,38,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── Brand ── */
+  .sb-brand {
+    height: 80px;
+    display: flex; align-items: center;
+    padding: 0 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+    gap: 12px;
+  }
+  .sb-brand-icon {
+    width: 36px; height: 36px; border-radius: 11px;
+    background: #dc2626;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(220,38,38,0.3);
+  }
+  .sb-brand-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px; font-weight: 800;
+    color: #fff; letter-spacing: 0.04em;
+  }
+  .sb-brand-name span { color: #dc2626; }
+
+  /* ── Nav ── */
+  .sb-nav {
+    flex: 1;
+    padding: 20px 12px;
+    display: flex; flex-direction: column; gap: 4px;
+    overflow-y: auto;
+  }
+  .sb-nav::-webkit-scrollbar { width: 0; }
+
+  .sb-nav-label {
+    font-size: 10px; font-weight: 500; letter-spacing: 0.14em;
+    text-transform: uppercase; color: rgba(255,255,255,0.2);
+    padding: 0 8px; margin: 8px 0 6px;
+  }
+
+  .sb-link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 12px; border-radius: 12px;
+    font-size: 13px; font-weight: 500;
+    color: rgba(255,255,255,0.35);
+    border: 1px solid transparent;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    position: relative;
+    cursor: pointer;
+  }
+  .sb-link:hover {
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.75);
+  }
+  .sb-link.active {
+    background: rgba(220,38,38,0.10);
+    border-color: rgba(220,38,38,0.20);
+    color: #f87171;
+  }
+  .sb-link-icon {
+    width: 32px; height: 32px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.04);
+    transition: background 0.2s;
+  }
+  .sb-link.active .sb-link-icon {
+    background: rgba(220,38,38,0.15);
+  }
+  .sb-link:hover .sb-link-icon {
+    background: rgba(255,255,255,0.07);
+  }
+  /* active left accent bar */
+  .sb-link.active::before {
+    content: '';
+    position: absolute; left: -12px; top: 50%;
+    transform: translateY(-50%);
+    width: 3px; height: 18px; border-radius: 0 3px 3px 0;
+    background: #dc2626;
+  }
+
+  /* ── User strip ── */
+  .sb-user {
+    margin: 0 12px 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    padding: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sb-user-avatar {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: rgba(220,38,38,0.12);
+    border: 1px solid rgba(220,38,38,0.2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; color: #f87171;
+  }
+  .sb-user-name {
+    font-size: 13px; font-weight: 500;
+    color: rgba(255,255,255,0.75);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex: 1;
+  }
+  .sb-user-role {
+    font-size: 10px; font-weight: 500; letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.25); margin-top: 1px;
+  }
+
+  /* ── Logout ── */
+  .sb-footer {
+    padding: 0 12px 20px;
+    flex-shrink: 0;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 16px;
+  }
+  .sb-logout {
+    width: 100%;
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px; border-radius: 12px;
+    font-size: 13px; font-weight: 500;
+    color: rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .sb-logout:hover {
+    background: rgba(220,38,38,0.10);
+    border-color: rgba(220,38,38,0.20);
+    color: #f87171;
+  }
+  .sb-logout:active { transform: scale(0.98); }
+  .sb-logout-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.2s;
+  }
+  .sb-logout:hover .sb-logout-icon { background: rgba(220,38,38,0.15); }
+`;
+
+function StyleTag() {
+  return <style dangerouslySetInnerHTML={{ __html: styles }} />;
+}
+
+const NAV_ITEMS = [
+  { to: "/dashboard", label: "Dashboard", Icon: Home },
+  { to: "/transfer", label: "Transfer", Icon: Send },
+  { to: "/history", label: "Riwayat", Icon: Clock },
+  { to: "/notifications", label: "Notifikasi", Icon: Bell },
+  { to: "/profile", label: "Profil", Icon: User },
+];
+
+export default function Sidebar() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const user = JSON.parse(localStorage.getItem("registeredUser")) || {
+    name: "Pengguna",
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/');
+    logout();
+    navigate("/");
   };
 
   return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col h-full flex-shrink-0 z-20">
-      
-      {/* BRANDING LOGO */}
-      <div className="h-24 flex items-center px-8 border-b border-slate-800 shrink-0">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-          <div className="p-2 bg-red-600 rounded-xl shadow-lg shadow-red-600/20">
-             <Mic className="text-white w-6 h-6" />
+    <div className="sb-root">
+      <StyleTag />
+      <aside className="sb-aside">
+        {/* Brand */}
+        <div className="sb-brand">
+          <div className="sb-brand-icon">
+            <Mic size={18} color="#fff" strokeWidth={1.75} />
           </div>
-          <span className="tracking-wide">VoiceBank</span>
-        </h2>
-      </div>
+          <span className="sb-brand-name">
+            Voice<span>Bank</span>
+          </span>
+        </div>
 
-      {/* NAVIGATION MENU */}
-      <nav className="flex-1 px-4 py-8 space-y-3 overflow-y-auto">
-        <NavLink
-          to="/dashboard"
-          className={({ isActive }) =>
-            `flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 font-semibold text-sm ${
-              isActive 
-                ? 'bg-red-600/10 text-red-500 border border-red-500/20 shadow-inner' 
-                : 'text-gray-400 hover:bg-slate-900 hover:text-white border border-transparent'
-            }`
-          }
-        >
-          <Home className="w-5 h-5" />
-          Dashboard
-        </NavLink>
+        {/* Nav */}
+        <nav className="sb-nav">
+          <p className="sb-nav-label">Menu</p>
+          {NAV_ITEMS.map(({ to, label, Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `sb-link${isActive ? " active" : ""}`
+              }
+            >
+              <div className="sb-link-icon">
+                <Icon size={15} strokeWidth={1.75} />
+              </div>
+              {label}
+            </NavLink>
+          ))}
+        </nav>
 
-        <NavLink
-          to="/transfer"
-          className={({ isActive }) =>
-            `flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 font-semibold text-sm ${
-              isActive 
-                ? 'bg-red-600/10 text-red-500 border border-red-500/20 shadow-inner' 
-                : 'text-gray-400 hover:bg-slate-900 hover:text-white border border-transparent'
-            }`
-          }
-        >
-          <Send className="w-5 h-5" />
-          Transfer
-        </NavLink>
+        {/* User strip */}
+        <div className="sb-user">
+          <div className="sb-user-avatar">
+            <User size={15} strokeWidth={1.75} />
+          </div>
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            <p className="sb-user-name">{user?.name}</p>
+            <p className="sb-user-role">NASABAH</p>
+          </div>
+        </div>
 
-        <NavLink
-          to="/history"
-          className={({ isActive }) =>
-            `flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 font-semibold text-sm ${
-              isActive 
-                ? 'bg-red-600/10 text-red-500 border border-red-500/20 shadow-inner' 
-                : 'text-gray-400 hover:bg-slate-900 hover:text-white border border-transparent'
-            }`
-          }
-        >
-          <Clock className="w-5 h-5" />
-          Riwayat
-        </NavLink>
-
-        <NavLink
-          to="/notifications"
-          className={({ isActive }) =>
-            `flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 font-semibold text-sm ${
-              isActive 
-                ? 'bg-red-600/10 text-red-500 border border-red-500/20 shadow-inner' 
-                : 'text-gray-400 hover:bg-slate-900 hover:text-white border border-transparent'
-            }`
-          }
-        >
-          <Bell className="w-5 h-5" />
-          Notifikasi
-        </NavLink>
-
-        <NavLink
-          to="/profile"
-          className={({ isActive }) =>
-            `flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 font-semibold text-sm ${
-              isActive 
-                ? 'bg-red-600/10 text-red-500 border border-red-500/20 shadow-inner' 
-                : 'text-gray-400 hover:bg-slate-900 hover:text-white border border-transparent'
-            }`
-          }
-        >
-          <User className="w-5 h-5" />
-          Profil
-        </NavLink>
-      </nav>
-
-      {/* LOGOUT BUTTON */}
-      <div className="p-6 border-t border-slate-800 shrink-0">
-        <button
-          className="w-full flex items-center justify-center gap-3 px-4 py-4 bg-slate-900 hover:bg-red-600 hover:text-white text-gray-400 border border-slate-800 hover:border-red-500 rounded-xl transition-all duration-300 font-bold shadow-lg group active:scale-95"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-5 h-5 group-hover:text-white transition-colors" />
-          Keluar
-        </button>
-      </div>
-    </aside>
+        {/* Footer / logout */}
+        <div className="sb-footer">
+          <button className="sb-logout" onClick={handleLogout}>
+            <div className="sb-logout-icon">
+              <LogOut size={14} strokeWidth={1.75} />
+            </div>
+            Keluar
+          </button>
+        </div>
+      </aside>
+    </div>
   );
 }
-
-export default Sidebar;

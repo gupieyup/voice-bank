@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mic } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 /* ─── Keyframe styles injected once ─── */
 const styles = `
@@ -215,6 +216,7 @@ function StyleTag() {
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -235,6 +237,7 @@ function LoginPage() {
     if (!storedUser) { setEmailError('Email belum terdaftar'); return; }
     if (email !== storedUser.email) { setEmailError('Email belum terdaftar'); return; }
     if (password !== storedUser.password) { setPasswordError('Password salah'); return; }
+    login('mock-jwt-token', storedUser);
     navigate('/dashboard');
   };
 
