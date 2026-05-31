@@ -1,91 +1,183 @@
-# **Voice Bank Project**
----
-# **JANGAN LUPA UPDATE TRELLO**
-1. Jangan push ke main
-2. Tiap develop push ke branch masing-masing sesuai aturan branch rules
-3. Kalau udah push ke branch masing-masing minta review ke anggota biar dinilai dulu
-4. Kalau udah nanti di merge ke develop abis tu ke main setiap minggu sesuai milestone
-5. Update TRELLO JANGAN LUPA !!!!!!!!!!!!!!! Link: https://trello.com/b/Dfh845Ky/voice-bank-project
----
-## 📌 Deskripsi
+# VoiceBank — Voice-First Banking App untuk Tunanetra Indonesia
 
-Indonesia memiliki lebih dari **3,7 juta penyandang tunanetra** yang kesulitan
-mengakses layanan perbankan digital. Hampir semua aplikasi bank dirancang
-untuk pengguna yang bisa melihat layar — meninggalkan tunanetra dalam
-ketergantungan pada orang lain untuk transaksi sehari-hari.
+> **Tim CC26-PSU325** | Coding Camp 2026 powered by DBS Foundation
 
-**VoiceBank** hadir sebagai solusi *voice-first banking* pertama di Indonesia
-yang memungkinkan tunanetra melakukan transaksi keuangan secara **mandiri,
-hanya dengan perintah suara dalam Bahasa Indonesia**.
+Indonesia memiliki lebih dari **3,7 juta penyandang tunanetra** yang kesulitan mengakses layanan perbankan digital. VoiceBank hadir sebagai solusi *voice-first banking* pertama di Indonesia yang memungkinkan tunanetra melakukan transaksi keuangan secara mandiri, hanya dengan perintah suara dalam Bahasa Indonesia.
 
 Cukup ucapkan:
 > *"Pak, kirim uang 50 ribu ke Budi"*
 
-Sistem akan memahami perintah, mengonfirmasi, memproses transaksi, dan
-memberikan umpan balik audio yang jelas — tanpa satu pun sentuhan layar.
+Sistem akan memahami perintah, mengonfirmasi, dan memberikan umpan balik audio yang jelas.
 
 ---
 
 ## 🎯 Fitur Utama
 
 | Modul | Deskripsi |
-|---|---|
-| 🎤 **Voice Command Interface** | Antarmuka perekaman suara kompatibel TalkBack/VoiceOver, dengan haptic feedback & konfirmasi TTS |
-| 🧠 **Smart Intent Engine** | Model TensorFlow CNN+BiLSTM+Custom Attention Layer untuk klasifikasi 5 intent keuangan dari audio |
-| 📊 **Analytics Dashboard** | Dashboard Streamlit interaktif: akurasi per dialek, confusion matrix, distribusi kualitas audio |
+|-------|-----------|
+| 🎤 Voice Command Interface | Antarmuka suara kompatibel TalkBack/VoiceOver, haptic feedback & TTS |
+| 🧠 Smart Intent Engine | Model CNN+BiLSTM+Custom Attention Layer, akurasi 93.93% |
+| 📊 Analytics Dashboard | Dashboard Streamlit: confusion matrix, distribusi intent |
 
-**5 Intent yang Didukung:**
-`TRANSFER` · `CEK_SALDO` · `RIWAYAT` · `TABUNG` · `BANTUAN`
-
----
-
-
-## **Project Structure**
-```
-📁 project-name/
-├── 📁 frontend/          # React/Vite app
-├── 📁 backend/           # Express.js REST API
-├── 📁 ml-model/          # TensorFlow model & training
-│   ├── notebooks/        # EDA, training notebooks
-│   ├── models/           # Saved .keras / SavedModel
-│   └── inference/        # Inference code
-├── 📁 data-science/      # Streamlit dashboard
-│   ├── data/
-│   └── dashboard/
-├── 📁 docs/              # Screenshots, guideline docs
-├── .gitignore
-├── README.md
-└── docker-compose.yml    # (opsional)
-```
+**5 Intent yang Didukung:** `TRANSFER` · `CEK_SALDO` · `RIWAYAT` · `TABUNG` · `BANTUAN`
 
 ---
 
-## **Branch Rules** 
+## 🛠 Tech Stack
+
+| Layer | Teknologi |
+|-------|-----------|
+| Frontend | React 19, Vite, Tailwind CSS, Axios |
+| Backend | FastAPI, SQLAlchemy, JWT (python-jose), Passlib |
+| AI/ML | TensorFlow, Keras, Librosa, Custom Attention Layer |
+| Database | SQLite (dev) / PostgreSQL (prod) |
+| Dashboard | Streamlit, Pandas, Matplotlib, Seaborn |
+| Deployment | Vercel (FE), Railway (BE), Streamlit Cloud (DS) |
+
+---
+
+## 📁 Struktur Folder
+
 ```
-main          ← production-ready only
-develop       ← integrasi mingguan
-├── feat/frontend-auth
-├── feat/backend-api-user
-├── feat/ml-model-training
-└── feat/ds-eda-cleaning
+voice-bank/
+├── frontend/              → React/Vite app
+│   └── src/
+│       ├── pages/         → LoginPage, DashboardPage, TransferPage, HistoryPage
+│       ├── components/    → VoiceRecorder, Sidebar, Header, ProtectedRoute
+│       ├── services/      → api.js, userService, transactionService, voiceService, ttsService
+│       ├── hooks/         → useAuth, useAudioRecorder
+│       └── routes/        → AppRoutes (protected routing)
+├── backend/               → FastAPI REST API
+│   └── app/
+│       ├── routers/       → auth, transactions, voice_input, user
+│       ├── models/        → User, Transaction, VoiceLog, ModelMetrics
+│       ├── schemas/       → Pydantic request/response schemas
+│       └── core/          → config, database, security (JWT)
+├── ml-model/              → TensorFlow model & inference
+│   ├── inference/         → model_loader, preprocessor, predict
+│   ├── evaluate_model.py  → Script evaluasi lengkap
+│   └── *.keras           → Trained model file
+├── data-science/          → EDA, pipeline, dashboard
+│   ├── audio_pipeline/    → mfcc_pipeline.py, gtts_augmentation.py
+│   ├── notebook/          → Jupyter notebooks (scraping, analysis)
+│   └── dashboard/         → Streamlit app
+└── docs/                  → Screenshots & guidelines
 ```
 
-Aturan branch:
-- main — hanya merge dari develop saat milestone tercapai
-- develop — merge setiap akhir minggu (sprint review)
-- feat/[nama-fitur] — satu fitur = satu branch, dibuat dari develop
 ---
-## **Commit Convension**
-```
-feat: digunakan kalau add fitur baru
-fix: kalo benerin error atau bug
-docs: update documentation
-model: buat push model
-data: kalau misalkan udah benerin datanya
-```
----
+
 ## 🚀 Cara Menjalankan Lokal
-## 🔗 Link Deployment
-## 📊 Link Dataset
 
+### Prerequisites
 
+- Node.js ≥ 18
+- Python ≥ 3.11
+- pip / venv
+
+### 1. Backend
+
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Linux/Mac
+
+pip install -r requirements.txt
+
+# Jalankan server (auto-create database)
+uvicorn app.main:app --reload --port 8000
+```
+
+Backend berjalan di `http://localhost:8000`. Swagger docs di `http://localhost:8000/docs`.
+
+### 2. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend berjalan di `http://localhost:5173`.
+
+### 3. ML Model (opsional, untuk testing inference)
+
+```bash
+cd ml-model
+pip install -r requirements.txt
+
+# Test inference dengan audio file
+python -c "from inference import IntentPredictor; p = IntentPredictor(); print(p.predict('path/ke/audio.wav'))"
+```
+
+---
+
+## 🔐 Environment Variables
+
+Buat file `backend/.env`:
+
+```env
+DATABASE_URL=sqlite:///./voicebank.db
+JWT_SECRET=your-secret-key-here
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=1440
+FRONTEND_URL=http://localhost:5173
+```
+
+---
+
+## 📡 API Endpoints
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| POST | `/api/auth/register` | Registrasi user baru |
+| POST | `/api/auth/login` | Login, return JWT token |
+| GET | `/api/auth/me` | Get current user |
+| GET | `/api/user/profile` | Profil user |
+| GET | `/api/balance` | Saldo user |
+| GET | `/api/transactions` | Riwayat transaksi |
+| POST | `/api/transactions` | Buat transaksi (transfer/tabung) |
+| POST | `/api/voice-input` | Kirim audio → prediksi intent |
+| GET | `/api/health` | Health check |
+
+Dokumentasi lengkap: jalankan backend lalu buka `http://localhost:8000/docs`
+
+---
+
+## 🌿 Branch Rules
+
+```
+main      ← production-ready only
+develop   ← integrasi mingguan
+feat/*    ← satu fitur = satu branch
+```
+
+## 📝 Commit Convention
+
+```
+feat: fitur baru
+fix: perbaikan bug
+docs: update dokumentasi
+model: push model
+data: perbaikan data
+```
+
+---
+
+## 👥 Tim
+
+| Nama | Role |
+|------|------|
+| Muhammad Rafif Pasya | AI Engineer |
+| Muhammad Hanif Rajendra | Full-Stack Web Developer |
+| Gladys Paramadani Hersaputri | Full-Stack Web Developer |
+| Fathan Nabil Rahman | Data Scientist |
+| Muhammad Inzaghi Rizqullah | Data Scientist |
+
+---
+
+## 📊 Link
+
+- **Trello**: https://trello.com/b/Dfh845Ky/voice-bank-project
+- **Deployment**: *(coming soon)*
+- **Dataset**: Mozilla Common Voice (ID) + Synthetic (gTTS)
