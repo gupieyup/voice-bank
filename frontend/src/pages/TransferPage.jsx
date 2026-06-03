@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
+import BiometricModal from '../components/BiometricModal';
+import { createTransfer } from '../services/transactionService';
+import { getProfile } from '../services/userService';
+import { tts } from '../services/ttsService';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Mic, CheckCircle2, Clock,
-  CreditCard, ArrowRight, Info
+  CreditCard, ArrowRight, Info, ShieldAlert
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
-import { createTransfer } from '../services/transactionService';
 import { sendVoiceCommand } from '../services/voiceService';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
-import { tts } from '../services/ttsService';
 
 function initials(name) {
   if (!name) return '?';
@@ -33,6 +35,11 @@ export default function TransferPage() {
   const { recording, audioBlob, startRecording, stopRecording } = useAudioRecorder();
   const isListening = recording || voiceProcessing;
 
+  const [showBiometric, setShowBiometric] = useState(false);
+  const [isBiometricRegistered, setIsBiometricRegistered] = useState(false);
+  const [isPinRegistered, setIsPinRegistered] = useState(false);
+  const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+
   // TTS announce halaman load
   useEffect(() => {
     tts.speak('Halaman transfer. Langkah 1 dari 4. Masukkan nomor rekening tujuan.');
@@ -43,7 +50,17 @@ export default function TransferPage() {
     if (step === 2) tts.speak('Langkah 2 dari 4. Masukkan nominal transfer.');
     else if (step === 3) tts.speak(`Langkah 3 dari 4. Konfirmasi transfer Rp ${parseInt(amount||'0',10).toLocaleString('id-ID')} ke ${recipientName}.`);
     else if (step === 4) tts.transferSuccess(parseInt(amount||'0',10).toLocaleString('id-ID'), recipientName);
-  }, [step]);
+  }, [step, amount, recipientName]);
+
+  useEffect(() => {
+    setIsPinRegistered(!!localStorage.getItem('transaction_pin'));
+    getProfile()
+      .then((profile) => {
+        setIsBiometricRegistered(!!(profile.webauthn_credential_id || localStorage.getItem('webauthn_credential_id')));
+      })
+      .catch((err) => console.error("Gagal mengambil profil:", err))
+      .finally(() => setIsProfileLoaded(true));
+  }, []);
 
   const recipientHistory = [
     { name: 'Budi Santoso',  accNo: '82938102', initial: 'BS' },
@@ -126,23 +143,32 @@ export default function TransferPage() {
       if (!amount || parseInt(amount,10) <= 0) { setError('Nominal transfer harus lebih besar dari Rp 0.'); tts.error('Nominal harus lebih dari nol rupiah.'); return; }
       setError(''); setStep(3);
     } else if (step === 3) {
-      // Submit transfer ke backend
+      setShowBiometric(true);
+    }
+  };
+
+  const handleTransferSuccess = async () => {
+    try {
       setSubmitting(true);
-      try {
-        await createTransfer({
-          type: 'transfer',
-          amount: parseInt(amount, 10),
-          target_user: recipientName || `Rekening ${accountNumber}`,
-        });
-        setError('');
-        setStep(4);
-      } catch (err) {
-        const msg = err.response?.data?.detail || 'Transfer gagal';
-        setError(msg);
-        tts.transferError(msg);
-      } finally {
-        setSubmitting(false);
-      }
+
+      const payload = {
+        type: 'transfer',
+        amount: parseInt(amount, 10),
+        target_user: recipientName || `Rekening ${accountNumber}`,
+      };
+
+      await createTransfer(payload);
+
+      setShowBiometric(false);
+      setError('');
+      setStep(4);
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.detail || err?.response?.data?.message || 'Transfer gagal diproses';
+      setError(msg);
+      tts.transferError(msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -320,8 +346,29 @@ export default function TransferPage() {
                 <div className="bg-zinc-50 border border-zinc-200 text-zinc-500 dark:bg-white/4 dark:border-white/8 rounded-xl p-3.5 px-4 text-xs dark:text-white/30 leading-relaxed">
                   Pastikan semua informasi sudah benar. Transaksi yang telah diproses tidak dapat dibatalkan.
                 </div>
-                <button className="w-full p-[15px] rounded-xl border-none cursor-pointer font-sans text-sm font-medium tracking-[0.05em] text-[#09090b] bg-gradient-to-br from-[#fbcfe8] to-[#f472b6] flex items-center justify-center gap-2 transition-all hover:opacity-88 active:scale-98 relative overflow-hidden after:absolute after:inset-0 after:bg-gradient-to-b after:from-white/8 after:to-transparent after:pointer-events-none mt-auto disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100" onClick={handleNextStep} disabled={submitting}>
-                  {submitting ? 'Memproses...' : 'Transfer Sekarang'}
+                {!isPinRegistered && isProfileLoaded && (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 flex items-start gap-3 mt-2">
+                    <ShieldAlert size={16} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">PIN Belum Terdaftar</p>
+                      <p className="text-[11px] text-zinc-500 dark:text-white/40 leading-relaxed">
+                        Anda harus mengatur PIN Transaksi di halaman Profil sebelum dapat melakukan transfer.
+                      </p>
+                      <button onClick={() => navigate('/profile')} className="mt-2 text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline">
+                        Buka Halaman Profil &rarr;
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                <button
+                  className="w-full p-[15px] rounded-xl border-none font-sans text-sm font-medium tracking-[0.05em] flex items-center justify-center gap-2 transition-all relative overflow-hidden mt-auto disabled:opacity-50 disabled:cursor-not-allowed text-[#09090b] bg-gradient-to-br from-[#fbcfe8] to-[#f472b6] hover:opacity-88 active:scale-98 cursor-pointer after:absolute after:inset-0 after:bg-gradient-to-b after:from-white/8 after:to-transparent after:pointer-events-none"
+                  onClick={handleNextStep}
+                  disabled={submitting || (!isPinRegistered && isProfileLoaded)}
+                >
+                  {submitting
+                    ? 'Memproses...'
+                    : (isBiometricRegistered ? 'Konfirmasi dengan Biometrik' : 'Konfirmasi dengan PIN')}
                 </button>
               </div>
             </div>
@@ -429,7 +476,12 @@ export default function TransferPage() {
           </div>
         </div>
       )}
-
+    <BiometricModal
+      open={showBiometric}
+      onClose={() => setShowBiometric(false)}
+      onSuccess={handleTransferSuccess}
+      isBiometricRegistered={isBiometricRegistered}
+    />
     </div>
   );
 }

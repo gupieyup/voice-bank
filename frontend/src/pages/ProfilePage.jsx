@@ -11,7 +11,13 @@ import {
   Shield,
   ArrowLeft,
   CheckCircle,
+  Fingerprint,
+  Lock,
 } from "lucide-react";
+
+import BiometricSetupModal from "../components/BiometricSetupModal";
+import PinSetupModal from "../components/PinSetupModal";
+import { getProfile } from "../services/userService";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -19,12 +25,34 @@ export default function ProfilePage() {
   const fileInputRef = useRef(null);
 
   const [user, setUser] = useState({
+    id: authUser?.id || 1,
     name: authUser?.name || "Pengguna",
     email: authUser?.email || "",
     phone: authUser?.phone || "",
     avatar: localStorage.getItem(`avatar_${authUser?.id}`) || null,
   });
   const [isSaved, setIsSaved] = useState(false);
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [isBiometricRegistered, setIsBiometricRegistered] = useState(false);
+  const [isPinRegistered, setIsPinRegistered] = useState(false);
+
+  useEffect(() => {
+    // Check local storage for PIN setup
+    if (localStorage.getItem('transaction_pin')) {
+      setIsPinRegistered(true);
+    }
+    
+    getProfile()
+      .then((profile) => {
+        // Mock backend by also checking localStorage for frontend testing
+        if (profile.webauthn_credential_id || localStorage.getItem('webauthn_credential_id')) {
+          setIsBiometricRegistered(true);
+        }
+        setUser((u) => ({ ...u, id: profile.id || u.id }));
+      })
+      .catch((err) => console.error("Gagal mengambil profil:", err));
+  }, []);
 
   // Sinkronisasi state user dengan authUser saat berubah
   useEffect(() => {
@@ -233,6 +261,70 @@ export default function ProfilePage() {
 
             <div className="h-[1px] bg-zinc-200 dark:bg-white/8 my-6" />
 
+            {/* PIN Transaksi */}
+            <div className="mb-8">
+              <label className="text-[11px] font-medium tracking-[0.08em] uppercase text-zinc-400 dark:text-white/30 mb-2 flex items-center gap-1.5">
+                <Lock size={12} strokeWidth={2} /> Keamanan Utama
+              </label>
+              <div className="flex items-center justify-between gap-3 bg-white border border-zinc-200 dark:bg-[#18181b] dark:border-white/8 rounded-xl px-4 py-3.5 shadow-sm dark:shadow-none">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-zinc-800 dark:text-white">
+                    PIN Transaksi (6-Digit)
+                  </span>
+                  <span className="text-xs text-zinc-400 dark:text-white/30">
+                    {isPinRegistered
+                      ? "PIN sudah diatur."
+                      : "Wajib diatur untuk melakukan transfer."}
+                  </span>
+                </div>
+                <button
+                  onClick={() => !isPinRegistered && setShowPinModal(true)}
+                  disabled={isPinRegistered}
+                  className={`px-4 py-2 rounded-lg font-medium text-xs transition-colors ${
+                    isPinRegistered
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 cursor-default"
+                      : "bg-pink-50 text-pink-600 hover:bg-pink-100 dark:bg-[#fbcfe8]/10 dark:text-[#fbcfe8] dark:hover:bg-[#fbcfe8]/20 cursor-pointer"
+                  }`}
+                >
+                  {isPinRegistered ? "Terdaftar" : "Buat PIN"}
+                </button>
+              </div>
+            </div>
+
+            {/* Keamanan Biometrik */}
+            <div className="mb-8">
+              <label className="text-[11px] font-medium tracking-[0.08em] uppercase text-zinc-400 dark:text-white/30 mb-2 flex items-center gap-1.5">
+                <Fingerprint size={12} strokeWidth={2} /> Keamanan Sekunder (Opsional)
+              </label>
+              <div className={`flex items-center justify-between gap-3 bg-white border border-zinc-200 dark:bg-[#18181b] dark:border-white/8 rounded-xl px-4 py-3.5 shadow-sm dark:shadow-none ${!isPinRegistered ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-zinc-800 dark:text-white">
+                    Face ID / Fingerprint
+                  </span>
+                  <span className="text-xs text-zinc-400 dark:text-white/30">
+                    {!isPinRegistered
+                      ? "Atur PIN terlebih dahulu."
+                      : isBiometricRegistered
+                        ? "Akan digunakan sebagai autentikasi utama."
+                        : "Gunakan biometrik untuk transfer lebih cepat."}
+                  </span>
+                </div>
+                <button
+                  onClick={() => !isBiometricRegistered && setShowBiometricModal(true)}
+                  disabled={isBiometricRegistered || !isPinRegistered}
+                  className={`px-4 py-2 rounded-lg font-medium text-xs transition-colors ${
+                    isBiometricRegistered
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 cursor-default"
+                      : "bg-pink-50 text-pink-600 hover:bg-pink-100 dark:bg-[#fbcfe8]/10 dark:text-[#fbcfe8] dark:hover:bg-[#fbcfe8]/20 cursor-pointer"
+                  }`}
+                >
+                  {isBiometricRegistered ? "Terdaftar" : "Setup Biometrik"}
+                </button>
+              </div>
+            </div>
+
+            <div className="h-[1px] bg-zinc-200 dark:bg-white/8 my-6" />
+
             {/* Save row */}
             <div className="flex items-center justify-between gap-3">
               {isSaved ? (
@@ -254,6 +346,23 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+      <BiometricSetupModal
+        open={showBiometricModal}
+        onClose={() => setShowBiometricModal(false)}
+        userId={user.id}
+        onSuccess={() => {
+          setShowBiometricModal(false);
+          setIsBiometricRegistered(true);
+        }}
+      />
+      <PinSetupModal
+        open={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onSuccess={() => {
+          setShowPinModal(false);
+          setIsPinRegistered(true);
+        }}
+      />
     </div>
   );
 }
